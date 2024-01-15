@@ -11,23 +11,33 @@ def binary_array_to_hex(binary_array):
     return ' '.join(hex_string[i:i+2] for i in range(0, len(hex_string), 2))
 
 def process_pids(input_pids_hex):
-    pid_ranges = {"0100": {"range": (0x01, 0x20), "data": [0] * 32, "flag": False},
-                  "0120": {"range": (0x21, 0x40), "data": [0] * 32, "flag": False},
-                  "0140": {"range": (0x41, 0x60), "data": [0] * 32, "flag": False},
-                  "0160": {"range": (0x61, 0x80), "data": [0] * 32, "flag": False},
-                  "0180": {"range": (0x81, 0xA0), "data": [0] * 32, "flag": False},
-                  "01A0": {"range": (0xA1, 0xC0), "data": [0] * 32, "flag": False},
-                  "01C0": {"range": (0xC1, 0xE0), "data": [0] * 32, "flag": False},
+    pid_ranges = {
+        "0100": {"range": (0x01, 0x20), "data": [0] * 32, "flag": False},
+        "0120": {"range": (0x21, 0x40), "data": [0] * 32, "flag": False},
+        "0140": {"range": (0x41, 0x60), "data": [0] * 32, "flag": False},
+        "0160": {"range": (0x61, 0x80), "data": [0] * 32, "flag": False},
+        "0180": {"range": (0x81, 0xA0), "data": [0] * 32, "flag": False},
+        "01A0": {"range": (0xA1, 0xC0), "data": [0] * 32, "flag": False},
+        "01C0": {"range": (0xC1, 0xE0), "data": [0] * 32, "flag": False},
     }
+
+    # Find the highest PID
+    highest_pid = max(int(pid_hex, 16) for pid_hex in input_pids_hex if 0x01 <= int(pid_hex, 16) <= 0xE0)
+
     for pid_hex in input_pids_hex:
         pid = int(pid_hex, 16)
         if 0x01 <= pid <= 0xE0:
             set_pid_bit(pid_ranges, pid)
 
-    for range_key, next_range_key in zip(list(pid_ranges)[:-1], list(pid_ranges)[1:]):
-        if pid_ranges[next_range_key]['flag']:
-            end_pid = pid_ranges[range_key]['range'][1]
-            set_pid_bit(pid_ranges, end_pid)
+    # Set flag and activate last PID for each range below the highest PID
+    for range_key, range_info in pid_ranges.items():
+        start, end = range_info['range']
+        if start <= highest_pid:
+            range_info['flag'] = True
+            if highest_pid < end:
+                set_pid_bit(pid_ranges, highest_pid)
+            else:
+                set_pid_bit(pid_ranges, end)
 
     output = []
     for range_key, range_info in pid_ranges.items():
@@ -36,6 +46,7 @@ def process_pids(input_pids_hex):
             output.append(f"{range_key}:\n41 {range_key[2:]} {hex_data}")
 
     return output
+
 
 # Introduction and Title
 print("Simple PID Calculator!")
