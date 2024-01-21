@@ -1,3 +1,5 @@
+import os
+
 def set_pid_bit(pid_ranges, pid):
     for range_key, range_info in pid_ranges.items():
         start, end = range_info['range']
@@ -27,33 +29,35 @@ def process_pids(input_pids_hex):
         if 0x01 <= pid <= 0xE0:
             set_pid_bit(pid_ranges, pid)
 
-    # Set the last bit of each range below the highest PID, excluding the range of the highest PID
     for range_key, range_info in pid_ranges.items():
         start, end = range_info['range']
         if start <= highest_pid < end:
-            # We're in the range of the highest PID, do not set the last bit
             continue
-        if start <= highest_pid:
+        if start < highest_pid:
             set_pid_bit(pid_ranges, end)
             range_info['flag'] = True
 
-    output = []
     for range_key, range_info in pid_ranges.items():
-        if range_info['flag']:
+        if any(range_info['data']) or range_info['flag']:
             hex_data = binary_array_to_hex(range_info['data'])
             output_line = f"{range_key}:\n41 {range_key[2:]} {hex_data}"
-            output.append(output_line)
+            pid_ranges[range_key]['output'] = output_line
+
+    output = [info['output'] for info in pid_ranges.values() if 'output' in info]
 
     return output
 
-# Introduction and Title
-print("Simple PID Calculator!")
-print("If you dread working out the 0100 request, this simple script will calculate all the PIDs for you.")
-
-while True:
-    user_input = input("Enter PIDs in hex (separated by space, 'exit' to quit): ")
-    if user_input.lower() == 'exit':
-        break
-    output_lines = process_pids(user_input.split())
-    for line in output_lines:
-        print(line)
+if __name__ == "__main__":
+    if os.name == 'nt':
+        os.system('cls')  # Clear screen on Windows
+    print("Simple PID Calculator!")
+    print("If you dread working out the 0100 request, this simple script will calculate all the PIDs for you.")
+    
+    while True:
+        user_input = input("Enter PIDs in hex (separated by space, 'exit' to quit): ")
+        if user_input.lower() == 'exit':
+            break
+        input_pids_hex = user_input.split()
+        output_lines = process_pids(input_pids_hex)
+        for line in output_lines:
+            print(line)
